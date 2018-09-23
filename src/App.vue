@@ -10,6 +10,7 @@
           <input type="text" id="add-item" v-model="itemToAdd" class="center-align">
           <label for="add-item">Lägg till vara</label>
         </div>
+        <h6 v-if="errorMsg.length" class="card-panel red white-text"><b>{{ errorMsg }}</b></h6>
         <button type="submit" class="btn waves-effect waves-light green">{{ isEditing ? 'Uppdatera' : 'Lägg till'}} <i class="material-icons right">send</i></button>
       </form>
     </div>
@@ -17,10 +18,10 @@
       <draggable v-model="groceries" @change="updateOrder">
         <transition-group>
           <ul v-if="groceries.length !== 0" v-for="item in groceries" :key="item._id" class="col s12 col m6 offset-m3">
-            <li v-if="!item.completed" class="left-align"> 
-              <h5 class="col s9" @click="setItemCompleted(item._id)"> {{item.order}} {{ item.name }}</h5> 
-              <i class="material-icons col s1" @click="editItem(item._id)">edit</i>
-              <i class="material-icons col s1" @click="removeItem(item._id)">delete</i>
+            <li v-if="!item.completed" class="left-align black-text "> 
+              <h5 class="col s9 truncate" @click="setItemCompleted(item._id)">{{ item.name }}</h5> 
+              <i class="material-icons col s1 blue-grey-text" @click="editItem(item._id)">edit</i>
+              <i class="material-icons col s1 red-text" @click="removeItem(item._id)">delete</i>
             </li>
           </ul>
         </transition-group>
@@ -30,12 +31,12 @@
       <div class="row">
         <h4>Plockade varor</h4>
         <ul v-for="item in completedGroceries" :key="item._id" class="col s12 col m6 offset-m3">
-          <li class="left-align"> 
-            <h5 class="col s9" @click="setItemNotCompleted(item._id)">{{ item.name }}</h5> 
+          <li class="left-align black-text"> 
+            <h5 class="col s9 truncate" @click="setItemNotCompleted(item._id)">{{ item.name }}</h5> 
           </li>
         </ul>
       </div>
-      <button @click="clearCompleted" class="btn waves-effect waves-light red">Rensa plockade varor</button>
+      <button @click="clearCompleted" class="btn waves-effect waves-light red" id="clear-completed-button">Rensa plockade varor</button>
     </div>
   </div>
 </template>
@@ -56,10 +57,10 @@
           { _id: 2, order: 1, name: 'bröd', completed: false },
           { _id: 3, order: 2, name: 'potatis', completed: false },
         ],
-        notCompletedGroceries: [],
         completedGroceries: [],
         itemToEdit: {},
-        isEditing: false
+        isEditing: false,
+        errorMsg: ''
       }
     },
     created: function() {
@@ -80,8 +81,11 @@
           this.isEditing = false
           return
         }
+        if(this.itemToAdd.length < 2) return this.errorMsg = 'Måste innehålla minst 2 tecken...'
+        this.errorMsg = ''
         const nameExists = await this.itemNameExists(this.itemToAdd)
-        if(nameExists) return
+        if(nameExists) return this.errorMsg = 'Finns redan en vara med det namnet...'
+        this.errorMsg = ''
         const newId = await this.createId()
         this.groceries = this.groceries.concat({ _id: newId, order: this.groceries.length, name: this.itemToAdd.toLowerCase(), completed: false })
         this.itemToAdd = '';
@@ -159,16 +163,24 @@ ul {
 li {
   text-transform: capitalize;
   cursor: grab;
-  background: #d1703c;
+  /* background: #d1703c; */
   color: #fff;
   /* padding: 1%; */
   overflow: hidden;
-  margin-bottom: 1%;
-  transition: all 1.5s ease-in-out;
+  margin-bottom: 2%;
+  /* border-bottom: 1px solid black;
+  border-right: 1px solid black; */
+  /* border: 1px solid black; */
+  box-shadow: 0 0 15px 0 #333;
+  border-radius: 3px;
 }
 i {
   margin: 3% auto;
   cursor: pointer;
+}
+
+#clear-completed-button {
+  margin-bottom: 3%;
 }
 
 
