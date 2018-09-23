@@ -14,7 +14,7 @@
         <button type="submit" class="btn waves-effect waves-light green">{{ isEditing ? 'Uppdatera varan' : 'Lägg till vara'}}</button>
       </form>
     </div>
-    <div class="row">
+    <div v-if="!allCompleted" class="row">
       <h5>Varor</h5>
       <hr class="col s12 col m6 offset-m3">
       <draggable v-model="groceries" @change="updateOrder">
@@ -30,13 +30,21 @@
       </draggable>
       <hr class="col s12 col m6 offset-m3">
     </div>
+    <div v-if="allCompleted" class="row">
+      <div class="col s12 col m6 offset-m3 green">
+        <!-- <hr class="col s12 col m6 offset-m3"> -->
+        <h4 class="white-text">Du är klar :)))</h4>
+        <!-- <h5 class="col s12 col m6 offset-m3"><b>Gå till kassan!</b></h5> -->
+        <!-- <hr class="col s12 col m6 offset-m3"> -->
+      </div>
+    </div>
     <div v-if="completedGroceries.length !== 0" >
       <div class="row">
         <h5>Plockade varor</h5>
         <hr class="col s12 col m6 offset-m3">
         <ul v-for="item in completedGroceries" :key="item._id" class="col s12 col m6 offset-m3">
-          <li class="center-align black-text"> 
-            <p class="col s12 truncate" @click="setItemNotCompleted(item._id)">{{ item.name }}</p> 
+          <li class="center-align black-text" @click="setItemNotCompleted(item._id)"> 
+            <p class="col s12 truncate">{{ item.name }}</p> 
           </li>
         </ul>
         <hr class="col s12 col m6 offset-m3">
@@ -63,6 +71,7 @@
           { _id: 3, order: 2, name: 'potatis', completed: false },
         ],
         completedGroceries: [],
+        allCompleted: false,
         itemToEdit: {},
         isEditing: false,
         errorMsg: ''
@@ -71,11 +80,14 @@
     created: function() {
       this.populateLists()
     },
-    updated: function() {
-      const editItemInput = document.getElementById('edit-item') || undefined
-      const addItemInput = document.getElementById('add-item') || undefined
+    updated: async function() {
+      const editItemInput = document.getElementById('edit-item') || undefined
+      if(editItemInput) editItemInput.focus()
+
+      await this.checkIfAllCompleted()
+      // const addItemInput = document.getElementById('add-item') || undefined
+      // addItemInput ? addItemInput.focus() : editItemInput.focus()
       
-      addItemInput ? addItemInput.focus() : editItemInput.focus()
     },
     methods: {
       async populateLists() {
@@ -100,6 +112,7 @@
         const newId = await this.createId()
         this.groceries = this.groceries.concat({ _id: newId, order: this.groceries.length, name: this.itemToAdd.toLowerCase(), completed: false })
         this.itemToAdd = ''
+        document.getElementById('add-item').focus()
       },
       async createId() {
         const id = Math.floor(Math.random() * 99999)
@@ -141,6 +154,10 @@
         return this.groceries = this.groceries.filter(item => item._id !== id)
         this.updateOrder()
       },
+      async checkIfAllCompleted() {
+        const notCompleted = await this.groceries.filter(item => !item.completed)
+        this.allCompleted = notCompleted.length === 0
+      },
       clearCompleted() {
         this.completedGroceries = []
         this.groceries = this.groceries.filter(item => !item.completed )
@@ -168,7 +185,7 @@ ul {
 
 #item-name {
 }
-#li:active {
+li:active {
   cursor: grabbing;
 }
 li {
@@ -186,6 +203,12 @@ li {
   /* border: 1px solid black; */
   /* box-shadow: 0 0 15px 0 #333; */
   border-radius: 3px;
+}
+li p {
+  cursor: pointer;
+}
+li p:active {
+  cursor: grabbing;
 }
 i {
   margin: 3% auto;
