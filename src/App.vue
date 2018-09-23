@@ -3,38 +3,43 @@
     <div class="row">
       <form @submit.prevent="addItem" class="col s12 col m6 offset-m3">
         <div v-if="isEditing" class="input-field">
-          <input type="text" id="edit-item" v-model="itemToEdit.name" class="center-align">
           <label for="edit-item">Redigera vara</label>
+          <input type="text" id="edit-item" v-model="itemToEdit.name" class="center-align" autofocus=true>
         </div>
         <div v-else class="input-field">
-          <input type="text" id="add-item" v-model="itemToAdd" class="center-align">
           <label for="add-item">Lägg till vara</label>
+          <input type="text" id="add-item" v-model="itemToAdd" class="center-align">
         </div>
         <h6 v-if="errorMsg.length" class="card-panel red white-text"><b>{{ errorMsg }}</b></h6>
-        <button type="submit" class="btn waves-effect waves-light green">{{ isEditing ? 'Uppdatera' : 'Lägg till'}} <i class="material-icons right">send</i></button>
+        <button type="submit" class="btn waves-effect waves-light green">{{ isEditing ? 'Uppdatera varan' : 'Lägg till vara'}}</button>
       </form>
     </div>
     <div class="row">
+      <h5>Varor</h5>
+      <hr class="col s12 col m6 offset-m3">
       <draggable v-model="groceries" @change="updateOrder">
         <transition-group>
           <ul v-if="groceries.length !== 0" v-for="item in groceries" :key="item._id" class="col s12 col m6 offset-m3">
             <li v-if="!item.completed" class="left-align black-text "> 
-              <h5 class="col s9 truncate" @click="setItemCompleted(item._id)">{{ item.name }}</h5> 
+              <p class="col s10 truncate" @click="setItemCompleted(item._id)"><b>{{ item.name }}</b></p> 
               <i class="material-icons col s1 blue-grey-text" @click="editItem(item._id)">edit</i>
               <i class="material-icons col s1 red-text" @click="removeItem(item._id)">delete</i>
             </li>
           </ul>
         </transition-group>
       </draggable>
+      <hr class="col s12 col m6 offset-m3">
     </div>
     <div v-if="completedGroceries.length !== 0" >
       <div class="row">
-        <h4>Plockade varor</h4>
+        <h5>Plockade varor</h5>
+        <hr class="col s12 col m6 offset-m3">
         <ul v-for="item in completedGroceries" :key="item._id" class="col s12 col m6 offset-m3">
-          <li class="left-align black-text"> 
-            <h5 class="col s9 truncate" @click="setItemNotCompleted(item._id)">{{ item.name }}</h5> 
+          <li class="center-align black-text"> 
+            <p class="col s12 truncate" @click="setItemNotCompleted(item._id)">{{ item.name }}</p> 
           </li>
         </ul>
+        <hr class="col s12 col m6 offset-m3">
       </div>
       <button @click="clearCompleted" class="btn waves-effect waves-light red" id="clear-completed-button">Rensa plockade varor</button>
     </div>
@@ -66,6 +71,12 @@
     created: function() {
       this.populateLists()
     },
+    updated: function() {
+      const editItemInput = document.getElementById('edit-item') || undefined
+      const addItemInput = document.getElementById('add-item') || undefined
+      
+      addItemInput ? addItemInput.focus() : editItemInput.focus()
+    },
     methods: {
       async populateLists() {
         this.completedGroceries = await this.groceries.filter(item => item.completed)
@@ -88,7 +99,7 @@
         this.errorMsg = ''
         const newId = await this.createId()
         this.groceries = this.groceries.concat({ _id: newId, order: this.groceries.length, name: this.itemToAdd.toLowerCase(), completed: false })
-        this.itemToAdd = '';
+        this.itemToAdd = ''
       },
       async createId() {
         const id = Math.floor(Math.random() * 99999)
@@ -163,15 +174,17 @@ ul {
 li {
   text-transform: capitalize;
   cursor: grab;
+  margin: 0;
+  padding: 0;
   /* background: #d1703c; */
   color: #fff;
   /* padding: 1%; */
   overflow: hidden;
-  margin-bottom: 2%;
+  /* margin-bottom: 2%; */
   /* border-bottom: 1px solid black;
   border-right: 1px solid black; */
   /* border: 1px solid black; */
-  box-shadow: 0 0 15px 0 #333;
+  /* box-shadow: 0 0 15px 0 #333; */
   border-radius: 3px;
 }
 i {
