@@ -3,25 +3,44 @@
     <div class="row">
       <form @submit.prevent="login" class="col s10 offset-s1 col m6 offset-m3">
         <div class="input-field">
-          <input type="email" id="email" v-model="user.email">
+          <i class="material-icons prefix">email</i>
+          <input type="email" id="email" v-model="email">
           <label for="email">Email</label>
         </div>
         <div class="input-field">
-          <input type="password" id="password" v-model="user.password">
+          <i class="material-icons prefix">lock</i>
+          <input type="password" id="password" v-model="password">
           <label for="password">Password</label>
         </div>
-        <button type="submit">Log In</button>
+        <button type="submit" class="btn waves-effect waves-light green">Log In</button>
       </form>
+    </div>
+    <div v-if="errorMsg.length" class="row" id="error-alert">
+      <h6 class="card-panel red white-text col s10 offset-s1"><b>{{ errorMsg }}</b></h6>
     </div>
   </div>
 </template>
 
 <script>
+import firebase from 'firebase'
+
 export default {
   name: 'Login',
   data() {
     return {
-      user: {}
+      email: '',
+      password: '',
+      errorMsg: ''
+    }
+  },
+  methods: {
+    login() {
+      firebase.auth().signInWithEmailAndPassword(this.email, this.password)
+        .then(() => {
+          this.$router.replace('/')
+          this.errorMsg = ''
+        })
+        .catch(error => this.errorMsg = error.message)
     }
   }
 }
@@ -34,6 +53,10 @@ export default {
     /* text-align: center; */
     color: #2c3e50;
     margin-top: 100px;
+  }
+
+  h6 {
+    line-height: 2em;
   }
 
 </style>

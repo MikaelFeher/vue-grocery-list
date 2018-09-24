@@ -1,5 +1,5 @@
 <template>
-  <div id="" class="container center-align">
+  <div id="main-page" class="container center-align">
     <!-- Loading -->
     <div v-if="isLoading" class="row" id="loading-screen">
       <div class="col s10 offset-s1 col m4 offset-m4">
@@ -38,10 +38,10 @@
         <draggable v-model="groceries" @change="updateOrder">
           <transition-group>
             <ul v-for="item in groceries" :key="item['.key']" class="col s12 col m6 offset-m3">
-              <li v-if="!item.completed" class="left-align black-text "> 
-                <p class="col s10 truncate" @click="setItemCompleted(item['.key'])"><b>{{ item.name }}</b></p> 
-                <i class="material-icons col s1 blue-grey-text" @click="editItem(item)">edit</i>
-                <i class="material-icons col s1 red-text" @click="removeItem(item['.key'])">delete</i>
+              <li v-if="!item.completed" class="left-align black-text"> 
+                <p class="col s9 truncate" @click="setItemCompleted(item['.key'])"><b>{{ item.name }}</b></p> 
+                <i class="material-icons col s1 col m1 blue-grey-text" @click="editItem(item)">edit</i>
+                <i class="material-icons col s1 col m1 red-text" @click="removeItem(item['.key'])">delete</i>
               </li>
             </ul>
           </transition-group>
@@ -66,7 +66,12 @@
           </ul>
           <hr class="col s12 col m6 offset-m3">
         </div>
-        <button @click="clearCompleted" class="btn waves-effect waves-light red" id="clear-completed-button">Rensa plockade varor</button>
+        <button @click="clearCompleted" class="btn waves-effect waves-light amber darken-2" id="clear-completed-button">Rensa plockade varor</button>
+      </div>
+    </div>
+    <div class="row">
+      <div class="col s6 offset-s3">
+        <button v-if="!isLoading" @click="logout" class="waves-effect waves-light btn red">Logga Ut</button>
       </div>
     </div>
   </div>
@@ -74,6 +79,7 @@
 
 <script>
   import draggable from 'vuedraggable'
+  import firebase from 'firebase'
   import { dbGroceriesRef } from '../firebase/init.js'
 
   export default {
@@ -89,7 +95,9 @@
         isLoading: true,
         itemToEdit: {},
         isEditing: false,
-        errorMsg: ''
+        errorMsg: '',
+        currentUser: firebase.auth().currentUser
+
       }
     },
     created: async function() {
@@ -159,6 +167,8 @@
       },
       removeItem(key) {
         dbGroceriesRef.child(key).remove()
+        this.isEditing = false
+        this.itemToEdit = ''
       },
       async checkCompleted() {
         if(!this.groceries && !this.isLoading) return this.allCompleted = true
@@ -180,6 +190,9 @@
           .map(item => itemsToDelete[item['.key']] = null)
         dbGroceriesRef.update(itemsToDelete)
         this.anyCompleted = false
+      },
+       logout() {
+        firebase.auth().signOut().then(() => this.$router.replace('/login'))
       }
     }
   }
@@ -187,12 +200,11 @@
 </script>
 
 <style>
-@import "https://fonts.googleapis.com/icon?family=Material+Icons";
-
 
 ul {
   list-style-type: none;
   margin: 0;
+  padding: 0;
 }
 li:active {
   cursor: grabbing;
@@ -202,15 +214,8 @@ li {
   cursor: grab;
   margin: 0;
   padding: 0;
-  /* background: #d1703c; */
   color: #fff;
-  /* padding: 1%; */
   overflow: hidden;
-  /* margin-bottom: 2%; */
-  /* border-bottom: 1px solid black;
-  border-right: 1px solid black; */
-  /* border: 1px solid black; */
-  /* box-shadow: 0 0 15px 0 #333; */
   border-radius: 3px;
 }
 li p {
@@ -220,7 +225,7 @@ li p:active {
   cursor: grabbing;
 }
 i {
-  margin: 3% auto;
+  margin: 3%;
   cursor: pointer;
 }
 
@@ -233,9 +238,7 @@ i {
 }
 
 #loading-screen {
-  /* margin: auto; */
-  margin-top: calc(100%/2);
+  margin-top: calc(100%/3);
 }
-
 
 </style>
