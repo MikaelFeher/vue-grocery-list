@@ -10,6 +10,7 @@
   "dependencies": {
     "firebase": "^5.5.1",
     "vue": "^2.5.17",
+    "vue-router": "^3.0.1",
     "vuedraggable": "^2.16.0",
     "vuefire": "^1.4.5"
   },
