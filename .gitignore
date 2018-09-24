@@ -21,4 +21,4 @@ yarn-error.log*
 *.sw*
 
 deploy.sh
-src/firebase/db.js
+src/firebase/init.js
