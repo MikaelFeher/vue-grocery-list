@@ -1,61 +1,73 @@
 <template>
   <div id="app" class="container">
-    <div class="row">
-      <!-- Add Item -->
-      <form v-if="!isEditing" @submit.prevent="addItem" class="col s12 col m6 offset-m3">
-        <div class="input-field">
-          <label for="add-item">Lägg till vara</label>
-          <input type="text" id="add-item" v-model="itemToAdd" class="center-align">
+    <!-- Loading -->
+    <div v-if="isLoading" class="row" id="loading-screen">
+      <div class="col s10 offset-s1 col m4 offset-m4">
+        <h5>Hämtar listan...</h5>
+        <div class="progress">
+          <div class="indeterminate"></div>
         </div>
-        <h6 v-if="errorMsg.length" class="card-panel red white-text"><b>{{ errorMsg }}</b></h6>
-        <button type="submit" class="btn waves-effect waves-light green">Lägg till vara</button>
-      </form>
-      <!-- Edit Item -->
-      <form v-if="isEditing" @submit.prevent="updateItem" class="col s12 col m6 offset-m3">
-        <div class="input-field">
-          <label for="edit-item">Redigera vara</label>
-          <input type="text" id="edit-item" v-model="itemToEdit.name" class="center-align">
-        </div>
-        <h6 v-if="errorMsg.length" class="card-panel red white-text"><b>{{ errorMsg }}</b></h6>
-        <button type="submit" class="btn waves-effect waves-light green">Uppdatera varan</button>
-      </form>
+      </div>
     </div>
-    <!-- List of not completed groceries -->
-    <div v-if="!allCompleted" class="row">
-      <h5>Varor</h5>
-      <hr class="col s12 col m6 offset-m3">
-      <draggable v-model="groceries" @change="updateOrder">
-        <transition-group>
+    <!-- Not loading -->
+    <div v-if="!isLoading">
+      <div class="row">
+        <!-- Add Item -->
+        <form v-if="!isEditing" @submit.prevent="addItem" class="col s12 col m6 offset-m3">
+          <div class="input-field">
+            <label for="add-item">Lägg till vara</label>
+            <input type="text" id="add-item" v-model="itemToAdd" class="center-align" autocomplete="off">
+          </div>
+          <h6 v-if="errorMsg.length" class="card-panel red white-text"><b>{{ errorMsg }}</b></h6>
+          <button type="submit" class="btn waves-effect waves-light green">Lägg till vara</button>
+        </form>
+        <!-- Edit Item -->
+        <form v-if="isEditing" @submit.prevent="updateItem" class="col s12 col m6 offset-m3">
+          <div class="input-field">
+            <label for="edit-item">Redigera vara</label>
+            <input type="text" id="edit-item" v-model="itemToEdit.name" class="center-align">
+          </div>
+          <h6 v-if="errorMsg.length" class="card-panel red white-text"><b>{{ errorMsg }}</b></h6>
+          <button type="submit" class="btn waves-effect waves-light green">Uppdatera varan</button>
+        </form>
+      </div>
+      <!-- List of not completed groceries -->
+      <div v-if="!allCompleted" class="row" id="groceries-list">
+        <h5>Varor</h5>
+        <hr class="col s12 col m6 offset-m3">
+        <draggable v-model="groceries" @change="updateOrder">
+          <transition-group>
+            <ul v-for="item in groceries" :key="item['.key']" class="col s12 col m6 offset-m3">
+              <li v-if="!item.completed" class="left-align black-text "> 
+                <p class="col s10 truncate" @click="setItemCompleted(item['.key'])"><b>{{ item.name }}</b></p> 
+                <i class="material-icons col s1 blue-grey-text" @click="editItem(item)">edit</i>
+                <i class="material-icons col s1 red-text" @click="removeItem(item['.key'])">delete</i>
+              </li>
+            </ul>
+          </transition-group>
+        </draggable>
+        <hr class="col s12 col m6 offset-m3">
+      </div>
+      <!-- All done notification -->
+      <div v-if="allCompleted" class="row">
+        <div class="col s12 col m6 offset-m3 green">
+          <h4 class="white-text">Du är klar :)))</h4>
+        </div>
+      </div>
+      <!-- List of completed groceries -->
+      <div v-if="anyCompleted" >
+        <div class="row">
+          <h5><em>Plockade Varor</em></h5>
+          <hr class="col s12 col m6 offset-m3">
           <ul v-for="item in groceries" :key="item['.key']" class="col s12 col m6 offset-m3">
-            <li v-if="!item.completed" class="left-align black-text "> 
-              <p class="col s10 truncate" @click="setItemCompleted(item['.key'])"><b>{{ item.name }}</b></p> 
-              <i class="material-icons col s1 blue-grey-text" @click="editItem(item)">edit</i>
-              <i class="material-icons col s1 red-text" @click="removeItem(item['.key'])">delete</i>
+            <li v-if="item.completed" class="center-align black-text" @click="setItemNotCompleted(item['.key'])"> 
+              <p class="col s12 truncate"><b>{{ item.name }}</b></p> 
             </li>
           </ul>
-        </transition-group>
-      </draggable>
-      <hr class="col s12 col m6 offset-m3">
-    </div>
-    <!-- All done notification -->
-    <div v-if="allCompleted" class="row">
-      <div class="col s12 col m6 offset-m3 green">
-        <h4 class="white-text">Du är klar :)))</h4>
+          <hr class="col s12 col m6 offset-m3">
+        </div>
+        <button @click="clearCompleted" class="btn waves-effect waves-light red" id="clear-completed-button">Rensa plockade varor</button>
       </div>
-    </div>
-    <!-- List of completed groceries -->
-    <div v-if="anyCompleted" >
-      <div class="row">
-        <h5>Plockade varor</h5>
-        <hr class="col s12 col m6 offset-m3">
-        <ul v-for="item in groceries" :key="item['.key']" class="col s12 col m6 offset-m3">
-          <li v-if="item.completed" class="center-align black-text" @click="setItemNotCompleted(item['.key'])"> 
-            <p class="col s12 truncate">{{ item.name }}</p> 
-          </li>
-        </ul>
-        <hr class="col s12 col m6 offset-m3">
-      </div>
-      <button @click="clearCompleted" class="btn waves-effect waves-light red" id="clear-completed-button">Rensa plockade varor</button>
     </div>
   </div>
 </template>
@@ -74,13 +86,13 @@
         itemToAdd: '',
         anyCompleted: false,
         allCompleted: false,
+        isLoading: true,
         itemToEdit: {},
         isEditing: false,
         errorMsg: ''
       }
     },
     created: async function() {
-      this.allCompleted = !this.groceries ? true : false
     },
     updated: async function() {
       const editItemInput = document.getElementById('edit-item') || undefined
@@ -89,7 +101,12 @@
       await this.checkCompleted()
     },
     firebase: {
-      groceries: dbGroceriesRef.orderByChild('order')
+      groceries: {
+        source: dbGroceriesRef.orderByChild('order'),
+        readyCallback: function() {
+          this.isLoading = false
+        }
+      }
     },
     methods: {
       async addItem() {
@@ -144,7 +161,7 @@
         dbGroceriesRef.child(key).remove()
       },
       async checkCompleted() {
-        if(!this.groceries) return this.allCompleted = true
+        if(!this.groceries && !this.isLoading) return this.allCompleted = true
         this.anyCompleted = await this.checkIfAnyCompleted()
         this.allCompleted = await this.checkIfAllCompleted()
       },
@@ -157,8 +174,11 @@
         const allCompleted = notCompleted.length ? false : true
         return allCompleted
       },
-      clearCompleted() {
-        this.groceries.map(item => item.completed && dbGroceriesRef.child(item['.key']).remove())
+      async clearCompleted() {
+        const itemsToDelete = {}
+        const completed = await this.groceries.filter(item => item.completed)
+          .map(item => itemsToDelete[item['.key']] = null)
+        dbGroceriesRef.update(itemsToDelete)
         this.anyCompleted = false
       }
     }
@@ -180,9 +200,6 @@
 ul {
   list-style-type: none;
   margin: 0;
-}
-
-#item-name {
 }
 li:active {
   cursor: grabbing;
@@ -214,8 +231,17 @@ i {
   cursor: pointer;
 }
 
+#groceries-list {
+  margin-bottom: 3%;
+}
+
 #clear-completed-button {
   margin-bottom: 3%;
+}
+
+#loading-screen {
+  /* margin: auto; */
+  margin-top: calc(100%/2);
 }
 
 
