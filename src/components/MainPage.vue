@@ -91,6 +91,7 @@
     },
     data() {
       return {
+        offlineDb: [],
         itemToAdd: '',
         anyCompleted: false,
         allCompleted: false,
@@ -121,22 +122,28 @@
       }
     },
     methods: {
+      populateOfflineDb() {
+        this.offlineDb = this.offlineDb.concat(this.groceries)
+      },
       async addItem() {
         if(await this.inputNotOk(this.itemToAdd)) return
         dbGroceriesRef.push({
           order: this.groceries.length, 
           name: this.itemToAdd.toLowerCase(), 
           completed: false 
-        })
-        this.itemToAdd = ''
-        document.getElementById('add-item').focus()
-        this.checkCompleted()
+        }).then(() => {
+            this.itemToAdd = ''
+            document.getElementById('add-item').focus()
+            this.checkCompleted()
+          })
       },
       async updateItem() {
         if(await this.inputNotOk(this.itemToEdit.name)) return
         dbGroceriesRef.child(this.itemToEdit['.key']).update({ name: this.itemToEdit.name })
-        this.isEditing = false
-        this.itemToEdit = {}
+          .then(() => {
+            this.isEditing = false
+            this.itemToEdit = {}
+          })
       },
       async inputNotOk(name) {
         if(this.nameTooShort(name)) {
@@ -157,19 +164,22 @@
         const exists = await this.groceries.filter(item => item.name === name)
         return !!exists.length
       },
-      async editItem(item) {
+      editItem(item) {
         this.errorMsg = ''
         this.isEditing = true
         this.itemToEdit = Object.assign({}, item)
       },  
       async setItemCompleted(key) {
-        await dbGroceriesRef.child(key).update({ completed: true }).then(() => {
-          return this.checkCompleted()
-        }) 
+        await dbGroceriesRef.child(key).update({ completed: true })
+          .then(() => {
+            return this.checkCompleted()
+          }) 
       },
       setItemNotCompleted(key) {
         dbGroceriesRef.child(key).update({ completed: false })
-          this.checkCompleted()
+          .then(() => {
+            return this.checkCompleted()
+          }) 
       },
       async updateOrder() {
         const updatedOrder = await this.groceries.reduce((acc, item) => acc.concat(Object.assign({}, item, {order : this.groceries.indexOf(item)})), [])
@@ -180,9 +190,11 @@
       },
       removeItem(key) {
         dbGroceriesRef.child(key).remove()
+          .then(() => {
+            return this.checkCompleted()
+          }) 
         this.isEditing = false
         this.itemToEdit = ''
-        this.checkCompleted()
       },
       checkCompleted() {
         if(!this.groceries && !this.isLoading) return this.allCompleted = true
@@ -205,6 +217,9 @@
           .map(item => itemsToDelete[item['.key']] = null)
 
         dbGroceriesRef.update(itemsToDelete)
+          .then(() => {
+            return this.checkCompleted()
+          }) 
         this.anyCompleted = false
       }
     }
