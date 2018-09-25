@@ -1,36 +1,33 @@
 <template>
   <div id="main-page" class="container center-align">
+
     <!-- Loading -->
-    <div v-if="isLoading" class="row" id="loading-screen">
-      <div class="col s10 offset-s1 col m4 offset-m4">
-        <h5>Hämtar listan...</h5>
-        <div class="progress">
-          <div class="indeterminate"></div>
-        </div>
-      </div>
-    </div>
+    <LoadingScreen v-if="isLoading" />
+    
     <!-- Not loading -->
     <div v-if="!isLoading">
       <div class="row">
+    
         <!-- Add Item -->
-        <form v-if="!isEditing" @submit.prevent="addItem" class="col s12 col m6 offset-m3">
-          <div class="input-field">
-            <label for="add-item">Lägg till vara</label>
-            <input type="text" id="add-item" v-model="itemToAdd" class="center-align" autocomplete="off">
-          </div>
-          <h6 v-if="errorMsg.length" class="card-panel red white-text"><b>{{ errorMsg }}</b></h6>
-          <button type="submit" class="btn waves-effect waves-light green">Lägg till vara</button>
-        </form>
+        <AddItemForm 
+          v-if="!isEditing" 
+          v-on:itemToAdd="itemToAdd = $event"
+          :addItem="addItem"
+          :errorMsg="errorMsg"
+        />
+    
         <!-- Edit Item -->
-        <form v-if="isEditing" @submit.prevent="updateItem" class="col s12 col m6 offset-m3">
-          <div class="input-field">
-            <label for="edit-item">Redigera vara</label>
-            <input type="text" id="edit-item" v-model="itemToEdit.name" class="center-align">
-          </div>
-          <h6 v-if="errorMsg.length" class="card-panel red white-text"><b>{{ errorMsg }}</b></h6>
-          <button type="submit" class="btn waves-effect waves-light green">Uppdatera varan</button>
-        </form>
+        <EditItemForm 
+          v-if="isEditing"
+          v-on:cancel="isEditing = $event, errorMsg = ''"
+          v-on:updateItem="updateItem"
+          :updateItem="updateItem"
+          :itemToEdit="itemToEdit"
+          :errorMsg="errorMsg"
+        />
+
       </div>
+    
       <!-- List of not completed groceries -->
       <div v-if="!allCompleted" class="row" id="groceries-list">
         <h5>Varor</h5>
@@ -48,44 +45,47 @@
         </draggable>
         <hr class="col s12 col m6 offset-m3">
       </div>
+
       <!-- All done notification -->
-      <div v-if="allCompleted" class="row">
-        <div class="col s12 col m6 offset-m3 green">
-          <h4 class="white-text">Du är klar :)))</h4>
-        </div>
-      </div>
+      <AllDone v-if="allCompleted" />
+      
       <!-- List of completed groceries -->
-      <div v-if="anyCompleted" >
-        <div class="row">
-          <h5><em>Plockade Varor</em></h5>
-          <hr class="col s12 col m6 offset-m3">
-          <ul v-for="item in groceries" :key="item['.key']" class="col s12 col m6 offset-m3">
-            <li v-if="item.completed" class="center-align black-text" @click="setItemNotCompleted(item['.key'])"> 
-              <p class="col s12 truncate"><b>{{ item.name }}</b></p> 
-            </li>
-          </ul>
-          <hr class="col s12 col m6 offset-m3">
-        </div>
-        <button @click="clearCompleted" class="btn waves-effect waves-light amber darken-2" id="clear-completed-button">Rensa plockade varor</button>
-      </div>
+      <CompletedGroceriesList 
+        v-if="anyCompleted"
+        v-on:setItemNotCompleted="setItemNotCompleted($event)"
+        :groceries="groceries"
+        :clearCompleted="clearCompleted"  
+      />
+
     </div>
-    <div class="row">
-      <div class="col s6 offset-s3">
-        <button v-if="!isLoading" @click="logout" class="waves-effect waves-light btn red">Logga Ut</button>
-      </div>
-    </div>
+    <LogoutButton v-if="!isLoading"  />
   </div>
 </template>
 
-<script>
+<script>  
   import draggable from 'vuedraggable'
   import firebase from 'firebase'
   import { dbGroceriesRef } from '../firebase/init.js'
 
+  import LoadingScreen from './LoadingScreen.vue'
+  import AllDone from './AllDone.vue'
+  import CompletedGroceriesList from './CompletedGroceriesList.vue'
+  import AddItemForm from './AddItemForm.vue'
+  import EditItemForm from './EditItemForm.vue'
+  import LogoutButton from './LogoutButton.vue'
+
+
+
   export default {
     name: 'MainPage',
     components: {
-      draggable
+      draggable,
+      LoadingScreen,
+      AllDone,
+      CompletedGroceriesList,
+      AddItemForm,
+      EditItemForm,
+      LogoutButton
     },
     data() {
       return {
@@ -152,15 +152,19 @@
         const exists = await this.groceries.filter(item => item.name === name)
         return !!exists.length
       },
+      async editItem(item) {
+        this.errorMsg = ''
+        this.isEditing = true
+        this.itemToEdit = Object.assign({}, item)
+      },  
       async setItemCompleted(key) {
         dbGroceriesRef.child(key).update({ completed: true })
+          .then(() => this.checkCompleted())
+        
       },
       async setItemNotCompleted(key) {
         dbGroceriesRef.child(key).update({ completed: false })
-      },
-      async editItem(item) {
-        this.isEditing = true
-        this.itemToEdit = Object.assign({}, item)
+          .then(() => this.checkCompleted())
       },
       async updateOrder() {
         return await this.groceries.map(item => dbGroceriesRef.child(item['.key']).update({ order: this.groceries.indexOf(item) }))
@@ -190,9 +194,6 @@
           .map(item => itemsToDelete[item['.key']] = null)
         dbGroceriesRef.update(itemsToDelete)
         this.anyCompleted = false
-      },
-       logout() {
-        firebase.auth().signOut().then(() => this.$router.replace('/login'))
       }
     }
   }
