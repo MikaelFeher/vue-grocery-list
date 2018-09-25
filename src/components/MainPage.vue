@@ -30,18 +30,19 @@
     
       <!-- List of not completed groceries -->
       <div v-if="!allCompleted" class="row" id="groceries-list">
-        <h5>Varor</h5>
-        <hr class="col s12 col m6 offset-m3">
-        <draggable v-model="groceries" @change="updateOrder">
-          <transition-group>
-            <ul v-for="item in groceries" :key="item['.key']" class="col s12 col m6 offset-m3">
-              <li v-if="!item.completed" class="left-align black-text"> 
-                <p class="col s9 truncate" @click="setItemCompleted(item['.key'])"><b>{{ item.name }}</b></p> 
-                <i class="material-icons col s1 col m1 blue-grey-text" @click="editItem(item)">edit</i>
-                <i class="material-icons col s1 col m1 red-text" @click="removeItem(item['.key'])">delete</i>
-              </li>
-            </ul>
-          </transition-group>
+        <div class="row">
+          <h5>Varor</h5>
+          <hr class="col s12 col m6 offset-m3">
+        </div>
+        <draggable :element="'ul'" :list="groceries" :options="{ handle: '.handle' }" @change="updateOrder" class="row">
+            <li v-if="!item.completed" v-for="item in groceries" :key="item['.key']" class="left-align black-text col s12 col m6 offset-m3">
+              <span id="drag-handle-span"><i class="material-icons blue-grey-text handle">drag_handle</i></span>
+              <p class="col s9 truncate" @click="setItemCompleted(item['.key'])">
+                <b>{{ item.name }}</b>
+              </p> 
+              <span class="" id="edit-icon-span"><i class="material-icons blue-grey-text" @click="editItem(item)">edit</i></span>
+              <span class="" id="delete-icon-span"><i class="material-icons red-text" @click="removeItem(item['.key'])">delete</i></span>
+            </li>
         </draggable>
         <hr class="col s12 col m6 offset-m3">
       </div>
@@ -50,13 +51,19 @@
       <AllDone v-if="allCompleted" />
       
       <!-- List of completed groceries -->
-      <CompletedGroceriesList 
-        v-if="anyCompleted"
-        v-on:setItemNotCompleted="setItemNotCompleted($event)"
-        :groceries="groceries"
-        :clearCompleted="clearCompleted"  
-      />
-
+      <div v-if="anyCompleted">
+        <div class="row">
+          <h5><em>Plockade Varor</em></h5>
+          <hr class="col s12 col m6 offset-m3">
+          <ul v-for="item in groceries" :key="item['.key']" class="">
+            <li v-if="item.completed" class="center-align black-text col s12 col m6 offset-m3" @click="setItemNotCompleted(item['.key'])"> 
+              <p class="col s12 truncate" id="completed-groceries-name"><b>{{ item.name }}</b></p> 
+            </li>
+          </ul>
+          <hr class="col s12 col m6 offset-m3">
+        </div>
+        <button @click="clearCompleted" class="btn waves-effect waves-light amber darken-2" id="clear-completed-button">Rensa plockade varor</button>
+      </div>
     </div>
     <LogoutButton v-if="!isLoading"  />
   </div>
@@ -64,17 +71,13 @@
 
 <script>  
   import draggable from 'vuedraggable'
-  import firebase from 'firebase'
   import { dbGroceriesRef } from '../firebase/init.js'
 
   import LoadingScreen from './LoadingScreen.vue'
   import AllDone from './AllDone.vue'
-  import CompletedGroceriesList from './CompletedGroceriesList.vue'
   import AddItemForm from './AddItemForm.vue'
   import EditItemForm from './EditItemForm.vue'
   import LogoutButton from './LogoutButton.vue'
-
-
 
   export default {
     name: 'MainPage',
@@ -82,7 +85,6 @@
       draggable,
       LoadingScreen,
       AllDone,
-      CompletedGroceriesList,
       AddItemForm,
       EditItemForm,
       LogoutButton
@@ -96,17 +98,19 @@
         itemToEdit: {},
         isEditing: false,
         errorMsg: '',
-        currentUser: firebase.auth().currentUser
-
+        updateOrderCount: 0
       }
     },
     created: async function() {
+      this.updateOrder()
+      this.checkCompleted()
     },
     updated: async function() {
       const editItemInput = document.getElementById('edit-item') || undefined
       if(editItemInput) editItemInput.focus()
 
-      await this.checkCompleted()
+      this.updateOrder()
+      this.checkCompleted()
     },
     firebase: {
       groceries: {
@@ -126,6 +130,7 @@
         })
         this.itemToAdd = ''
         document.getElementById('add-item').focus()
+        this.checkCompleted()
       },
       async updateItem() {
         if(await this.inputNotOk(this.itemToEdit.name)) return
@@ -158,40 +163,47 @@
         this.itemToEdit = Object.assign({}, item)
       },  
       async setItemCompleted(key) {
-        dbGroceriesRef.child(key).update({ completed: true })
-          .then(() => this.checkCompleted())
-        
+        await dbGroceriesRef.child(key).update({ completed: true }).then(() => {
+          return this.checkCompleted()
+        }) 
       },
-      async setItemNotCompleted(key) {
+      setItemNotCompleted(key) {
         dbGroceriesRef.child(key).update({ completed: false })
-          .then(() => this.checkCompleted())
+          this.checkCompleted()
       },
       async updateOrder() {
-        return await this.groceries.map(item => dbGroceriesRef.child(item['.key']).update({ order: this.groceries.indexOf(item) }))
+        const updatedOrder = await this.groceries.reduce((acc, item) => acc.concat(Object.assign({}, item, {order : this.groceries.indexOf(item)})), [])
+        await updatedOrder.map(async (item) => {
+          return await dbGroceriesRef.child(item['.key']).update({ order: item.order })
+        })
+        this.checkCompleted()
       },
       removeItem(key) {
         dbGroceriesRef.child(key).remove()
         this.isEditing = false
         this.itemToEdit = ''
+        this.checkCompleted()
       },
-      async checkCompleted() {
+      checkCompleted() {
         if(!this.groceries && !this.isLoading) return this.allCompleted = true
-        this.anyCompleted = await this.checkIfAnyCompleted()
-        this.allCompleted = await this.checkIfAllCompleted()
+        this.anyCompleted = this.checkIfAnyCompleted()
+        this.allCompleted = this.checkIfAllCompleted()
       },
-      async checkIfAnyCompleted() {
-        const completed = await this.groceries.filter(item => item.completed)
+      checkIfAnyCompleted() {
+        const completed = this.groceries.filter(item => item.completed)
         return !!completed.length
       },
-      async checkIfAllCompleted() {
-        const notCompleted = await this.groceries.filter(item => !item.completed)
+      checkIfAllCompleted() {
+        const notCompleted = this.groceries.filter(item => !item.completed)
         const allCompleted = notCompleted.length ? false : true
         return allCompleted
       },
       async clearCompleted() {
         const itemsToDelete = {}
-        const completed = await this.groceries.filter(item => item.completed)
+
+        this.groceries.filter(item => item.completed)
           .map(item => itemsToDelete[item['.key']] = null)
+
         dbGroceriesRef.update(itemsToDelete)
         this.anyCompleted = false
       }
@@ -202,36 +214,58 @@
 
 <style>
 
+* {
+  box-sizing: border-box;
+}
+
 ul {
   list-style-type: none;
   margin: 0;
   padding: 0;
+  transition: all 3s ease-in-out;
 }
+
+ul li {
+  position: relative;
+}
+
 li:active {
   cursor: grabbing;
 }
+
 li {
   text-transform: capitalize;
-  cursor: grab;
-  margin: 0;
-  padding: 0;
+  line-height: 1.3em;
+  padding: 2%;
   color: #fff;
   overflow: hidden;
-  border-radius: 3px;
+  border: 1px solid black;
+  opacity: 1;
+  background: #fff;
 }
+
 li p {
   cursor: pointer;
+  margin-left: 5% !important;
+  padding-left: 1% !important;
 }
-li p:active {
-  cursor: grabbing;
+
+#completed-groceries-name {
+  margin-left: 0 !important;
+  padding: 0;
 }
+
 i {
-  margin: 3%;
+  padding: 0;
   cursor: pointer;
 }
 
 #groceries-list {
-  margin-bottom: 3%;
+  margin: 3% 0;
+}
+
+#groceries-list p {
+  margin-left: 2%;
 }
 
 #clear-completed-button {
@@ -242,4 +276,29 @@ i {
   margin-top: calc(100%/3);
 }
 
+#delete-icon-span {
+  position: absolute;
+  right: 0;
+  top: 20%;
+}
+
+#edit-icon-span {
+  position: absolute;
+  right: 9%;
+  top: 20%;
+}
+
+#drag-handle-span {
+  position: absolute;
+  top: 25%;
+  left: 0;
+}
+
+.handle {
+  cursor: grab;
+}
+
+.handle:active {
+  cursor: grabbing;
+}
 </style>

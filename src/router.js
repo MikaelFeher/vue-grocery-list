@@ -7,10 +7,11 @@ import firebase from 'firebase'
 Vue.use(Router);
 
 const router = new Router({
+  base: '/vue-grocery-list/',
   mode: 'history',
   routes: [
     {
-      path: '/',
+      path: '/index.html',
       name: 'MainPage',
       component: MainPage,
       meta: {
@@ -34,7 +35,7 @@ router.beforeEach((to, from, next) => {
   const requiresAuth = to.matched.some(record => record.meta.requiresAuth)
 
   if(requiresAuth && !currentUser) next('/login')
-  else if(!requiresAuth && currentUser) next('/')
+  else if(!requiresAuth && currentUser) next('/index.html')
   else next()
 })
 

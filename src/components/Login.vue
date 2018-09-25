@@ -37,7 +37,7 @@ export default {
     login() {
       firebase.auth().signInWithEmailAndPassword(this.email, this.password)
         .then(() => {
-          this.$router.replace('/')
+          this.$router.replace('/index.html')
           this.errorMsg = ''
         })
         .catch(error => this.errorMsg = error.message)
