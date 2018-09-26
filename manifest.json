@@ -1,0 +1,21 @@
+{
+  "short_name": "Inköpslista",
+  "name": "vue-grocery-list",
+  "icons": [
+    {
+      "src": "./192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "./512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": "/vue-grocery-list/login",
+  "background_color": "#3367D6",
+  "display": "standalone",
+  "scope": "/vue-grocery-list/",
+  "theme_color": "#3367D6"
+}
