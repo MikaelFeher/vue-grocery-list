@@ -91,7 +91,6 @@
     },
     data() {
       return {
-        offlineDb: [],
         itemToAdd: '',
         anyCompleted: false,
         allCompleted: false,
@@ -99,18 +98,14 @@
         itemToEdit: {},
         isEditing: false,
         errorMsg: '',
-        updateOrderCount: 0
       }
     },
     created: async function() {
-      this.updateOrder()
       this.checkCompleted()
     },
     updated: async function() {
       const editItemInput = document.getElementById('edit-item') || undefined
       if(editItemInput) editItemInput.focus()
-
-      this.updateOrder()
       this.checkCompleted()
     },
     firebase: {
